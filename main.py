@@ -32,8 +32,10 @@ from rdflib.term import URIRef
 
 __rdffile__ = "./gm306.ttl"
 __csvfile__ = "jgames.csv"
-__relevant__ = ['GPIr', 'QId', 'ASIN', 'Leipzig ID']
-__exportfile__ = "joined.json"
+__relevant_csv_fields__ = ['GPIr', 'QId', 'ASIN', 'Leipzig ID']
+__export_joined_file__ = "joined.json"
+__rdf_json__ = "rdf.json"
+__csv_json__ = "csv.json"
 
 __ma_prefix = "https://mediaarts-db.bunka.go.jp/data/property/"
 __toi__ = {  # triples of interest
@@ -63,13 +65,10 @@ if __name__ == "__main__":
                     data[__toi__[bla[0].toPython()]] = bla[1].toPython().split(",") # it seems like moby games are comma separated
                 else:
                     data[__toi__[bla[0].toPython()]] = bla[1].toPython()
-        if 'source' in data:  # only those interest me
-            all_of_it[data['source']] = data
-        elif True == False:
-            if 'jident' in data:
-                all_of_it[data['jident']] = data
-            else:
-                all_of_it[subject] = data
+        if 'jident' in data:
+            all_of_it[data['jident']] = data
+        else:
+            all_of_it[subject] = data
     csv_info = {}
     with codecs.open(__csvfile__, "r", encoding="utf-8", errors="ignore") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -81,7 +80,7 @@ if __name__ == "__main__":
             if row[0] == "" and row[1] == "" and row[2] == "":
                 continue
             data = {}
-            terms = set(__relevant__)
+            terms = set(__relevant_csv_fields__)
             for i, value in enumerate(row):
                 if header[i] in terms:
                     if value.strip() != "":
@@ -95,12 +94,18 @@ if __name__ == "__main__":
                 #main_data[data['Leipzig ID']] = data
                 main_data[data['QId']] = data
     all_shared = []
-    for key in all_of_it:
-        if key in main_data:
-            if 'jident' not in main_data:
-                similar = copy.deepcopy(all_of_it[key])
-                similar.update(main_data[key])
-                all_shared.append(similar)
+    for key, value in all_of_it.items():
+        if 'source' in value:
+            if value['source'] in main_data:
+                    similar = copy.deepcopy(all_of_it[key])
+                    similar.update(main_data[value['source']])
+                    all_shared.append(similar)
     print(f"Shared Entries: {len(all_shared)}")
-    with codecs.open(__exportfile__, "w", encoding="utf-8") as export_file:
+    print(f"J Entries: {len(all_of_it)}")
+    print(f"CSV Entries: {len(main_data)}")
+    with codecs.open(__export_joined_file__, "w", encoding="utf-8") as export_file:
         json.dump(all_shared, export_file, indent=3, ensure_ascii=False)
+    with codecs.open(__rdf_json__ , "w", encoding="utf-8") as export_file:
+        json.dump(all_of_it, export_file, indent=3, ensure_ascii=False)
+    with codecs.open(__csv_json__, "w", encoding="utf-8") as export_file:
+        json.dump(main_data, export_file, indent=3, ensure_ascii=False)
